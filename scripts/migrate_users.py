@@ -7,42 +7,18 @@ Each new user account will have the same Plex name as their Jellyfin username, a
 
 """
 
-
-import requests
 from plexapi.server import PlexServer
 from plexapi.myplex import MyPlexAccount
-import argparse
 import json
 import random
 import string
 import time
-import creds
+import helpers.jellyfin as jf
+import helpers.plex as px
 
-parser = argparse.ArgumentParser(description="Move Plex users to Jellyfin")
-
-"""Credentials"""
-PLEX_URL = creds.PLEX_URL
-PLEX_TOKEN = creds.PLEX_TOKEN
-PLEX_SERVER_NAME = creds.PLEX_SERVER_NAME
-
-plex = PlexServer(PLEX_URL, PLEX_TOKEN)
-
-JELLYFIN_URL = creds.JELLYFIN_URL
-JELLYFIN_API_KEY = creds.JELLYFIN_API_KEY
+plex = px.server
 
 user_list = {}
-
-
-def j_get(cmd, params):
-    return json.loads(requests.get(
-        JELLYFIN_URL + "/jellyfin/" + cmd + "?api_key=" + JELLYFIN_API_KEY +
-        ("&" + params if params is not None else "")).text)
-
-
-def j_post(cmd, params, payload):
-    return requests.post(JELLYFIN_URL + "/jellyfin/" + cmd + "?api_key=" + JELLYFIN_API_KEY +
-                         ("&" + params if params is not None else ""), json=payload)
-
 
 def password(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -56,8 +32,7 @@ def add_password(uid):
         "NewPw": p,
         "ResetPassword": 'false'
      }
-    r = requests.post(JELLYFIN_URL + "/Users/" + str(uid) + "/Password?api_key=" +
-                     JELLYFIN_API_KEY, json=payload)
+    r = jf.post('/Users/{}/Password'.format(str(uid)), None, payload=payload)
     if not str(r.status_code).startswith('2'):
         return False
     else:
@@ -66,30 +41,7 @@ def add_password(uid):
 
 
 def update_policy(uid):
-    policy = {
-        "IsAdministrator": "false",
-        "IsHidden": "true",
-        "IsHiddenRemotely": "true",
-        "IsDisabled": "false",
-        "EnableRemoteControlOfOtherUsers": "false",
-        "EnableSharedDeviceControl": "false",
-        "EnableRemoteAccess": "true",
-        "EnableLiveTvManagement": "false",
-        "EnableLiveTvAccess": "false",
-        "EnableContentDeletion": "false",
-        "EnableContentDownloading": "false",
-        "EnableSyncTranscoding": "false",
-        "EnableSubtitleManagement": "false",
-        "EnableAllDevices": "true",
-        "EnableAllChannels": "false",
-        "EnablePublicSharing": "false",
-        "InvalidLoginAttemptCount": 5,
-        "BlockedChannels": [
-            "IPTV",
-            "TVHeadEnd Recordings"
-        ]
-    }
-    if not str(j_post("Users/" + str(uid) + "/Policy", None, policy).status_code).startswith('2'):
+    if not str(jf.post("Users/{}/Policy".format(str(uid)), None, payload=jf.user_policy).status_code).startswith('2'):
         return False
     else:
         return True
@@ -100,7 +52,7 @@ def make_jellyfin_user(username):
         payload = {
             "Name": username
         }
-        r = j_post("Users/New", None, payload)
+        r = jf.post("Users/New", None, payload=payload)
         if not str(r.status_code).startswith('2'):
             return False, r.content.decode("utf-8"), p
         else:
