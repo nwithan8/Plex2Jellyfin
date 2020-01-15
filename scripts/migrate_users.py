@@ -16,9 +16,11 @@ import time
 import helpers.jellyfin as jf
 import helpers.plex as px
 
+jf.authenticate()
 plex = px.server
 
 user_list = {}
+
 
 def password(length):
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(length))
@@ -26,52 +28,42 @@ def password(length):
 
 def add_password(uid):
     p = password(length=10)
-    payload = {
-        "Id": uid,
-        "CurrentPw": '',
-        "NewPw": p,
-        "ResetPassword": 'false'
-     }
-    r = jf.post('/Users/{}/Password'.format(str(uid)), None, payload=payload)
-    if not str(r.status_code).startswith('2'):
-        return False
-    else:
-        print(p)
-        return p
+    r = jf.resetPassword(uid)
+    if str(r.status_code).startswith('2'):
+        r = jf.setUserPassword(uid, "", p)
+        if str(r.status_code).startswith('2'):
+            return p
+    return None
 
 
 def update_policy(uid):
-    if not str(jf.post("Users/{}/Policy".format(str(uid)), None, payload=jf.user_policy).status_code).startswith('2'):
-        return False
-    else:
+    if str(jf.updatePolicy(uid, jf.user_policy).status_code).startswith('2'):
         return True
+    return False
+
 
 def make_jellyfin_user(username):
     try:
         p = None
-        payload = {
-            "Name": username
-        }
-        r = jf.post("Users/New", None, payload=payload)
-        if not str(r.status_code).startswith('2'):
-            return False, r.content.decode("utf-8"), p
-        else:
+        r = jf.makeUser(username)
+        if str(r.status_code).startswith('2'):
             r = json.loads(r.text)
             uid = r['Id']
-            #p = add_password(uid)
+            p = add_password(uid)
             if not p:
-                p = None
+                print("Password update failed. Moving on...")
             if update_policy(uid):
                 return True, uid, p
             else:
                 return False, uid, p
+        return False, r.content.decode("utf-8"), p
     except Exception as e:
         print(e)
         return False, None, None
 
 
 def convert_plex_to_jellyfin(username):
-    print("Adding " + username + " to Jellyfin...")
+    print("Adding {} to Jellyfin...".format(username))
     succeeded, uid, pwd = make_jellyfin_user(username)
     if succeeded:
         user_list[username] = [uid, pwd]
@@ -88,13 +80,13 @@ def convert_plex_to_jellyfin(username):
 print("Beginning user migration...")
 for user in plex.myPlexAccount().users():
     for s in user.servers:
-        if s.name == PLEX_SERVER_NAME:
+        if s.name == px.PLEX_SERVER_NAME:
             success, failure_reason = convert_plex_to_jellyfin(user.username)
             if success:
-                print(user.username + " added to Jellyfin.")
+                print("{} added to Jellyfin.".format(user.username))
             else:
-                print(user.username + " was not added to Jellyfin. Reason: " + str(failure_reason))
-            #time.sleep(5)
+                print("{} was not added to Jellyfin. Reason: {}".format(user.username, failure_reason))
+            # time.sleep(5)
             break
 print("User migration complete.")
 if user_list:
