@@ -3,7 +3,7 @@
 """
 
 This script will make a Jellyfin user account for each Plex user currently with access to your Plex Media Server (Sharing Users)
-Each new user account will have the same Plex name as their Jellyfin username, and a blank password
+Each new user account will have the same Plex name as their Jellyfin username, and a randomly-generated alphanumeric password. 
 
 """
 
