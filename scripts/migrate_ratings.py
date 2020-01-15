@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This script will grab each movie or music track on your Plex Media Server with a custom user rating, and add the
+rating on the corresponding item on Jellyfin.
+"""
+
 import helpers.jellyfin as jf
 import helpers.plex as px
 

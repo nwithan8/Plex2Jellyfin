@@ -1,18 +1,14 @@
 #!/usr/bin/env python3
 
 """
-
-This script will make a Jellyfin user account for each Plex user currently with access to your Plex Media Server (Sharing Users)
-Each new user account will have the same Plex name as their Jellyfin username, and a randomly-generated alphanumeric password. 
-
+This script will make a Jellyfin user account for each Plex user currently with access to your Plex Media Server (
+Sharing Users) Each new user account will have the same Plex name as their Jellyfin username,
+and a randomly-generated alphanumeric password.
 """
 
-from plexapi.server import PlexServer
-from plexapi.myplex import MyPlexAccount
 import json
 import random
 import string
-import time
 import helpers.jellyfin as jf
 import helpers.plex as px
 

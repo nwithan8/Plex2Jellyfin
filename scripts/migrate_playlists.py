@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This script will make a Jellyfin playlist for each playlist on your Plex Media Server.
+Every item on each Plex playlist will be located and added to the new Jellyfin playlist.
+"""
+
 import helpers.jellyfin as jf
 import helpers.plex as px
 
