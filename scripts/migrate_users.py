@@ -32,8 +32,8 @@ def add_password(uid):
     return None
 
 
-def update_policy(uid):
-    if str(jf.updatePolicy(uid, jf.user_policy).status_code).startswith('2'):
+def update_policy(uid, policy=None):
+    if str(jf.updatePolicy(uid, policy).status_code).startswith('2'):
         return True
     return False
 
@@ -48,7 +48,7 @@ def make_jellyfin_user(username):
             p = add_password(uid)
             if not p:
                 print("Password update failed. Moving on...")
-            if update_policy(uid):
+            if update_policy(uid, jf.JELLYFIN_USER_POLICY):
                 return True, uid, p
             else:
                 return False, uid, p
@@ -67,10 +67,7 @@ def convert_plex_to_jellyfin(username):
     else:
         if uid:
             return False, uid
-        else:
-            return False, None
-
-    return True, None
+        return False, None
 
 
 print("Beginning user migration...")
@@ -82,7 +79,6 @@ for user in plex.myPlexAccount().users():
                 print("{} added to Jellyfin.".format(user.username))
             else:
                 print("{} was not added to Jellyfin. Reason: {}".format(user.username, failure_reason))
-            # time.sleep(5)
             break
 print("User migration complete.")
 if user_list:
