@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 JELLYFIN_URL = creds.JELLYFIN_URL
 JELLYFIN_API_KEY = creds.JELLYFIN_API_KEY
-user_policy = creds.JELLYFIN_USER_POLICY
+JELLYFIN_USER_POLICY = creds.JELLYFIN_USER_POLICY
 
 token_header = None
 admin_id = None
@@ -54,16 +54,25 @@ def post(cmd, params, payload):
 
 def postWithToken(hdr, method, data=None):
     hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
-    res = requests.post('{}{}'.format(JELLYFIN_URL, method), headers=hdr, data=json.dumps(data))
-    return res
+    return requests.post('{}{}'.format(JELLYFIN_URL, method), headers=hdr, data=json.dumps(data))
+
+
+def delete(cmd, params):
+    return requests.delete(
+        '{}{}?api_key={}{}'.format(JELLYFIN_URL, cmd, JELLYFIN_API_KEY, ("&" + params if params is not None else "")))
 
 
 def makeUser(username):
     url = '/Users/New'
     data = {
-        'Name': username
+        'Name': str(username)
     }
     return post(url, None, payload=data)
+
+
+def deleteUser(userId):
+    url = '/Users/{}'.format(str(userId))
+    return delete(url, None)
 
 
 def resetPassword(userId):
@@ -85,9 +94,11 @@ def setUserPassword(userId, currentPass, newPass):
     return postWithToken(hdr=token_header, method=url, data=data)
 
 
-def updatePolicy(userId, policy):
+def updatePolicy(userId, policy=None):
+    if not policy:
+        policy = JELLYFIN_USER_POLICY
     url = '/Users/{}/Policy'.format(userId)
-    return post(url, None, payload=policy)
+    return postWithToken(hdr=token_header, method=url, data=policy)
 
 
 def search(keyword):
@@ -100,9 +111,14 @@ def getLibraries():
     return getWithToken(hdr=token_header, method=url)
 
 
+def getUsers():
+    url = '/user_usage_stats/user_list'
+    return get(url, None)
+
+
 def updateRating(itemId, upvote):
     url = '/Users/{}/Items/{}/Rating?{}'.format(str(admin_id), str(itemId), urlencode({'Likes': upvote}))
-    print(url)
+
     return postWithToken(hdr=token_header, method=url)
 
 
@@ -117,3 +133,8 @@ def addToPlaylist(playlistId, itemIds):
     url = '/Playlists/{}/Items?{}'.format(str(playlistId), str(item_list))
     print(url)
     return postWithToken(hdr=token_header, method=url)
+
+
+def statsCustomQuery(query):
+    url = '/user_usage_stats/submit_custom_query'
+    return post(url, None, query)
