@@ -114,7 +114,8 @@ def getLibraries():
 
 
 def getUsers():
-    url = '/user_usage_stats/user_list'
+    # url = '/user_usage_stats/user_list'
+    url = '/Users'
     return get(url, None)
 
 
