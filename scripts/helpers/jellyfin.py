@@ -7,6 +7,8 @@ from urllib.parse import urlencode
 JELLYFIN_URL = creds.JELLYFIN_URL
 JELLYFIN_API_KEY = creds.JELLYFIN_API_KEY
 JELLYFIN_USER_POLICY = creds.JELLYFIN_USER_POLICY
+JELLYFIN_ADMIN_USERNAME = creds.JELLYFIN_ADMIN_USERNAME
+JELLYFIN_ADMIN_PASSWORD = creds.JELLYFIN_ADMIN_PASSWORD
 
 token_header = None
 admin_id = None
@@ -25,8 +27,8 @@ def authenticate():
             Version=1,
             Token=""  # not required
         )}
-    data = {'Username': creds.JELLYFIN_ADMIN_USERNAME, 'Password': creds.JELLYFIN_ADMIN_PASSWORD,
-            'Pw': creds.JELLYFIN_ADMIN_PASSWORD}
+    data = {'Username': JELLYFIN_ADMIN_USERNAME, 'Password': JELLYFIN_ADMIN_PASSWORD,
+            'Pw': JELLYFIN_ADMIN_PASSWORD}
     try:
         res = postWithToken(hdr=xEmbyAuth, method='/Users/AuthenticateByName', data=data).json()
         token_header = {'X-Emby-Token': '{}'.format(res['AccessToken'])}
@@ -54,7 +56,7 @@ def post(cmd, params, payload):
 
 def postWithToken(hdr, method, data=None):
     hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
-    return requests.post('{}{}'.format(JELLYFIN_URL, method), headers=hdr, data=json.dumps(data))
+    return requests.post(f'{JELLYFIN_URL}{method}', headers=hdr, data=json.dumps(data))
 
 
 def delete(cmd, params):
