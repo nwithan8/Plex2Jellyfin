@@ -1,143 +1,260 @@
-import helpers.creds as creds
 import requests
 import socket
 import json
 from urllib.parse import urlencode
+import os
+import signal
+import sys
+import time
 
-JELLYFIN_URL = creds.JELLYFIN_URL
-JELLYFIN_API_KEY = creds.JELLYFIN_API_KEY
-JELLYFIN_USER_POLICY = creds.JELLYFIN_USER_POLICY
-JELLYFIN_ADMIN_USERNAME = creds.JELLYFIN_ADMIN_USERNAME
-JELLYFIN_ADMIN_PASSWORD = creds.JELLYFIN_ADMIN_PASSWORD
-
-token_header = None
-admin_id = None
+token_file = '.jellyfin_token'
 
 
-def authenticate():
-    global token_header
-    global admin_id
-    xEmbyAuth = {
-        'X-Emby-Authorization': 'Emby UserId="{UserId}", Client="{Client}", Device="{Device}", DeviceId="{'
-                                'DeviceId}", Version="{Version}", Token="""'.format(
-            UserId="",  # not required, if it was we would have to first request the UserId from the username
-            Client='account-automation',
-            Device=socket.gethostname(),
-            DeviceId=hash(socket.gethostname()),
-            Version=1,
-            Token=""  # not required
-        )}
-    data = {'Username': JELLYFIN_ADMIN_USERNAME, 'Password': JELLYFIN_ADMIN_PASSWORD,
-            'Pw': JELLYFIN_ADMIN_PASSWORD}
-    try:
-        res = postWithToken(hdr=xEmbyAuth, method='/Users/AuthenticateByName', data=data).json()
-        token_header = {'X-Emby-Token': '{}'.format(res['AccessToken'])}
-        admin_id = res['User']['Id']
-    except Exception as e:
-        print('Could not log into Jellyfin.\n{}'.format(e))
+def signal_handler(signum, frame):
+    print('Canceling...')
+    exit()
 
 
-def get(cmd, params=None):
-    return json.loads(requests.get(
-        '{}{}?api_key={}{}'.format(JELLYFIN_URL, cmd, JELLYFIN_API_KEY, ("&" + params if params else ""))).text)
+def _save_token_id(file, creds):
+    with open(file, 'w+') as f:
+        for line in creds:
+            f.write(f"{line}\n")
 
 
-def getWithToken(hdr, method, data=None):
-    hdr = {'accept': 'application/json', **hdr}
-    res = requests.get('{}{}'.format(JELLYFIN_URL, method), headers=hdr, data=json.dumps(data)).json()
-    return res
+class JellyfinItem:
+    def __init__(self, data):
+        self.id = data['ItemId']
+        self.name = data['Name']
 
 
-def post(cmd, params, payload):
-    return requests.post(
-        '{}{}?api_key={}{}'.format(JELLYFIN_URL, cmd, JELLYFIN_API_KEY, ("&" + params if params is not None else "")),
-        json=payload)
+class JellyfinPlaylist:
+    def __init__(self, data):
+        self.id = data['Id']
 
 
-def postWithToken(hdr, method, data=None):
-    hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
-    return requests.post(f'{JELLYFIN_URL}{method}', headers=hdr, data=json.dumps(data))
+class JellyfinUser:
+    def __init__(self, data):
+        self.id = data['Id']
+        self.name = data['Name']
 
 
-def delete(cmd, params):
-    return requests.delete(
-        '{}{}?api_key={}{}'.format(JELLYFIN_URL, cmd, JELLYFIN_API_KEY, ("&" + params if params is not None else "")))
+class Jellyfin:
+    def __init__(self, url, api_key, username, password, default_policy):
+        self.url = url
+        self.key = api_key
+        self.username = username
+        self.password = password
+        self.user_id = None
+        self.policy = default_policy
+        self.token_header = None
+        self.authenticate(force_new_auth=False)
+        signal.signal(signal.SIGINT, signal.default_int_handler)
 
+    def authenticate(self, force_new_auth=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        if force_new_auth or not self._load_token_id(token_file):
+            print("Authenticating with Jellfin...")
+            xEmbyAuth = {
+                'X-Emby-Authorization': 'Emby UserId="{UserId}", Client="{Client}", Device="{Device}", '
+                                        'DeviceId="{DeviceId}", Version="{Version}", Token="""'.format(
+                    UserId="",  # not required, if it was we would have to first request the UserId from the username
+                    Client='account-automation',
+                    Device=socket.gethostname(),
+                    DeviceId=hash(socket.gethostname()),
+                    Version=1,
+                    Token=""  # not required
+                )}
+            data = {'Username': self.username, 'Password': self.password,
+                    'Pw': self.password}
+            try:
+                res = self._post_request_with_token(hdr=xEmbyAuth, cmd='/Users/AuthenticateByName', data=data).json()
+                self.token_header = {'X-Emby-Token': '{}'.format(res['AccessToken'])}
+                self.user_id = res['User']['Id']
+                _save_token_id(file=token_file, creds=[res['AccessToken'], res['User']['Id']])
+            except Exception as e:
+                print('Could not log into Jellyfin.\n{}'.format(e))
 
-def makeUser(username):
-    url = '/Users/New'
-    data = {
-        'Name': str(username)
-    }
-    return post(url, None, payload=data)
+    def _load_token_id(self, file):
+        if os.path.exists(file):
+            with open(file, 'r') as f:
+                lines = f.readlines()
+                self.token_header = {'X-Emby-Token': f'{lines[0].rstrip()}'}
+                self.user_id = lines[1].rstrip()
+            return True
+        return False
 
+    def _get_request(self, cmd, params=None, retried=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        try:
+            res = requests.get(f'{self.url}{cmd}?api_key={self.key}{("&" + params if params else "")}')
+            if res:
+                return res.json()
+            return {}
+        except:
+            if retried:
+                return {}
+            self.authenticate(force_new_auth=True)
+        return self._get_request(cmd=cmd, params=params, retried=True)
 
-def deleteUser(userId):
-    url = '/Users/{}'.format(str(userId))
-    return delete(url, None)
+    def _get_request_with_token(self, hdr, cmd, data=None, retried=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        try:
+            hdr = {'accept': 'application/json', **hdr}
+            res = requests.get(f'{self.url}{cmd}', headers=hdr, data=(json.dumps(data) if data else None))
+            if res:
+                return res.json()
+            return {}
+        except:
+            if retried:
+                return {}
+            self.authenticate(force_new_auth=True)
+        return self._get_request_with_token(hdr=hdr, cmd=cmd, data=data, retried=True)
 
+    def _post_request(self, cmd, params=None, payload=None, retried=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        try:
+            res = requests.post(
+                f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}', json=payload)
+            if res:
+                return res
+            return None
+        except:
+            if retried:
+                return None
+            self.authenticate(force_new_auth=True)
+        return self._post_request(cmd=cmd, params=params, payload=payload, retried=True)
 
-def resetPassword(userId):
-    url = '/Users/{}/Password'.format(userId)
-    data = {
-        'Id': str(userId),
-        'ResetPassword': 'true'
-    }
-    return postWithToken(hdr=token_header, method=url, data=data)
+    def _post_request_with_token(self, hdr, cmd, data=None, retried=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        try:
+            hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
+            res = requests.post(f'{self.url}{cmd}', headers=hdr, data=(json.dumps(data) if data else None))
+            if res:
+                return res
+            return None
+        except:
+            if retried:
+                return None
+            self.authenticate(force_new_auth=True)
+        return self._post_request_with_token(hdr=hdr, cmd=cmd, data=data, retried=True)
 
+    def _delete_request(self, cmd, params=None, retried=False):
+        signal.signal(signal.SIGINT, signal_handler)
+        try:
+            res = requests.delete(
+                f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}')
+            if res:
+                return res.json()
+            return {}
+        except:
+            if retried:
+                return {}
+            self.authenticate(force_new_auth=True)
+        return self._delete_request(cmd=cmd, params=params, retried=True)
 
-def setUserPassword(userId, currentPass, newPass):
-    url = '/Users/{}/Password'.format(userId)
-    data = {
-        'Id': userId,
-        'CurrentPw': currentPass,
-        'NewPw': newPass
-    }
-    return postWithToken(hdr=token_header, method=url, data=data)
+    def makeUser(self, username):
+        cmd = '/Users/New'
+        data = {
+            'Name': str(username)
+        }
+        res = self._post_request(cmd=cmd, params=None, payload=data)
+        if res:
+            return JellyfinUser(data=res.json()), None
+        return None, res.content.decode("utf-8")
 
+    def deleteUser(self, userId):
+        cmd = f'/Users/{userId}'
+        return self._delete_request(cmd=cmd, params=None)
 
-def updatePolicy(userId, policy=None):
-    if not policy:
-        policy = JELLYFIN_USER_POLICY
-    url = '/Users/{}/Policy'.format(userId)
-    return postWithToken(hdr=token_header, method=url, data=policy)
+    def resetPassword(self, userId):
+        cmd = f'/Users/{userId}/Password'
+        data = {
+            'Id': str(userId),
+            'ResetPassword': 'true'
+        }
+        res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=data)
+        if res:
+            return True
+        return False
 
+    def setUserPassword(self, userId, currentPass, newPass):
+        cmd = f'/Users/{userId}/Password'
+        data = {
+            'Id': userId,
+            'CurrentPw': currentPass,
+            'NewPw': newPass
+        }
+        res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=data)
+        if res:
+            return True
+        return False
 
-def search(keyword):
-    url = '/Search/Hints?{}'.format(urlencode({'SearchTerm': keyword}))
-    return getWithToken(hdr=token_header, method=url)['SearchHints']
+    def updatePolicy(self, userId, policy=None):
+        if not policy:
+            policy = self.policy
+        cmd = f'/Users/{userId}/Policy'
+        res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=policy)
+        if res:
+            return True
+        return False
 
+    def search(self, keyword):
+        cmd = f'/Search/Hints?{urlencode({"SearchTerm": keyword})}'
+        res = self._get_request_with_token(hdr=self.token_header, cmd=cmd)
+        if not res:
+            return []
+        res = res['SearchHints']
+        items = []
+        for item in res:
+            items.append(JellyfinItem(data=item))
+        return items
 
-def getLibraries():
-    url = '/Users/{}/Items'.format(str(admin_id))
-    return getWithToken(hdr=token_header, method=url)
+    def getLibraries(self):
+        cmd = f'/Users/{self.user_id}/Items'
+        return self._get_request_with_token(hdr=self.token_header, cmd=cmd)
 
+    def getUsers(self):
+        # cmd = '/user_usage_stats/user_list'
+        cmd = '/Users'
+        res = self._get_request(cmd=cmd, params=None)
+        users = []
+        for user in res:
+            users.append(JellyfinUser(data=user))
+        return users
 
-def getUsers():
-    # url = '/user_usage_stats/user_list'
-    url = '/Users'
-    return get(url, None)
+    def updateRating(self, itemId, upvote):
+        cmd = f'/Users/{self.user_id}/Items/{itemId}/Rating?Likes={upvote}'
+        res = self._post_request_with_token(hdr=self.token_header, cmd=cmd)
+        if res:
+            return True
+        return False
 
+    def getPlaylist(self, name):
+        cmd = f'/Playlists'
 
-def updateRating(itemId, upvote):
-    url = '/Users/{}/Items/{}/Rating?{}'.format(str(admin_id), str(itemId), urlencode({'Likes': upvote}))
+    def makePlaylist(self, name):
+        cmd = f'/Playlists'
+        params = f'{urlencode({"Name": name})}&UserId={self.user_id}'
+        res = self._post_request(cmd=cmd, params=params)
+        if res:
+            return JellyfinPlaylist(data=res.json())
+        return None
 
-    return postWithToken(hdr=token_header, method=url)
+    def addToPlaylist(self, playlistId, itemIds):
+        item_list = ','.join(itemIds)
+        cmd = f'/Playlists/{playlistId}/Items'
+        params = f'Ids={item_list}&UserId={self.user_id}'
+        res = self._post_request(cmd=cmd, params=params)
+        if res:
+            return True
+        return False
 
+    def statsCustomQuery(self, query):
+        cmd = '/user_usage_stats/submit_custom_query'
+        return self._post_request(cmd=cmd, params=None, payload=query)
 
-def makePlaylist(name):
-    url = '/Playlists?{}'.format(urlencode({'Name': name}))
-    print(url)
-    return postWithToken(hdr=token_header, method=url)
-
-
-def addToPlaylist(playlistId, itemIds):
-    item_list = ','.join(itemIds)
-    url = '/Playlists/{}/Items?{}'.format(str(playlistId), str(item_list))
-    print(url)
-    return postWithToken(hdr=token_header, method=url)
-
-
-def statsCustomQuery(query):
-    url = '/user_usage_stats/submit_custom_query'
-    return post(url, None, query)
+    def findPlexItemOnJellyfin(self, plex_item):
+        results = self.search(keyword=plex_item.title)
+        if results:
+            return results[0]
+        return None

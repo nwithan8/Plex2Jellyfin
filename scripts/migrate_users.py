@@ -11,9 +11,16 @@ import random
 import string
 import helpers.jellyfin as jf
 import helpers.plex as px
+import helpers.creds as settings
 
-jf.authenticate()
-plex = px.server
+plex = px.Plex(url=settings.PLEX_URL,
+               token=settings.PLEX_TOKEN,
+               server_name=settings.PLEX_SERVER_NAME)
+jellyfin = jf.Jellyfin(url=settings.JELLYFIN_URL,
+                       api_key=settings.JELLYFIN_API_KEY,
+                       username=settings.JELLYFIN_ADMIN_USERNAME,
+                       password=settings.JELLYFIN_ADMIN_PASSWORD,
+                       default_policy=settings.JELLYFIN_USER_POLICY)
 
 user_list = {}
 
@@ -23,65 +30,61 @@ def password(length):
 
 
 def add_password(uid):
-    p = password(length=10)
-    r = jf.resetPassword(uid)
-    if str(r.status_code).startswith('2'):
-        r = jf.setUserPassword(uid, "", p)
-        if str(r.status_code).startswith('2'):
-            return p
+    pwd = password(length=10)
+    if jellyfin.resetPassword(userId=uid):
+        if jellyfin.setUserPassword(userId=uid, currentPass="", newPass=pwd):
+            return pwd
     return None
 
 
 def update_policy(uid, policy=None):
-    if str(jf.updatePolicy(uid, policy).status_code).startswith('2'):
+    if jellyfin.updatePolicy(userId=uid, policy=policy):
         return True
     return False
 
 
 def make_jellyfin_user(username):
     try:
-        p = None
-        r = jf.makeUser(username)
-        if str(r.status_code).startswith('2'):
-            r = json.loads(r.text)
-            uid = r['Id']
-            p = add_password(uid)
-            if not p:
+        pwd = None
+        jellyfin_user, failure_msg = jellyfin.makeUser(username=username)
+        if jellyfin_user:
+            pwd = add_password(uid=jellyfin_user.id)
+            if not pwd:
                 print("Password update failed. Moving on...")
-            if update_policy(uid, jf.JELLYFIN_USER_POLICY):
-                return True, uid, p
+            if update_policy(uid=jellyfin_user.id, policy=jellyfin.policy):
+                return True, jellyfin_user.id, pwd
             else:
-                return False, uid, p
-        return False, r.content.decode("utf-8"), p
+                return False, jellyfin_user.id, pwd
+        return False, failure_msg, pwd
     except Exception as e:
-        print(e)
-        return False, None, None
+        print(f"Error in make_jellyfin_user: {e}")
+    return False, None, None
 
 
 def convert_plex_to_jellyfin(username):
-    print("Adding {} to Jellyfin...".format(username))
-    succeeded, uid, pwd = make_jellyfin_user(username)
+    print(f"Adding {username} to Jellyfin...")
+    succeeded, uid, pwd = make_jellyfin_user(username=username)
     if succeeded:
         user_list[username] = [uid, pwd]
         return True, None
     else:
         if uid:
             return False, uid
-        return False, None
+    return False, None
 
 
-print("Beginning user migration...")
-for user in plex.myPlexAccount().users():
-    for s in user.servers:
-        if s.name == px.PLEX_SERVER_NAME:
-            success, failure_reason = convert_plex_to_jellyfin(user.username)
+if __name__ == '__main__':
+    print("Beginning user migration...")
+    for plex_user in plex.get_users():
+        if plex.user_has_server_access(user=plex_user):
+            success, failure_reason = convert_plex_to_jellyfin(username=plex_user.username)
             if success:
-                print("{} added to Jellyfin.".format(user.username))
+                print(f"{plex_user.username} added to Jellyfin.")
             else:
-                print("{} was not added to Jellyfin. Reason: {}".format(user.username, failure_reason))
+                print(f"{plex_user.username} was not added to Jellyfin. Reason: {failure_reason}")
             break
-print("User migration complete.")
-if user_list:
-    print("\nUsername ---- Password")
-    for k, v in user_list.items():
-        print(str(k) + "  |  " + str(v[1]))
+    print("User migration complete.")
+    if user_list:
+        print("\nUsername ---- Password")
+        for k, v in user_list.items():
+            print(f"{k}  |  {v[1]}")

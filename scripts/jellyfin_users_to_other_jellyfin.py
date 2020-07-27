@@ -9,6 +9,7 @@ import json
 import random
 import string
 import helpers.jellyfin as jf
+import helpers.creds as settings
 
 # Details for first Jellyfin server (source server)
 JF_SRC_URL = ''
@@ -22,6 +23,18 @@ JF_DEST_API_KEY = ''
 JF_DEST_ADMIN_USERNAME = ''
 JF_DEST_ADMIN_PASSWORD = ''
 
+jellyfin_src = jf.Jellyfin(url=JF_SRC_URL,
+                           api_key=JF_SRC_API_KEY,
+                           username=JF_SRC_ADMIN_USERNAME,
+                           password=JF_SRC_ADMIN_PASSWORD,
+                           default_policy=settings.JELLYFIN_USER_POLICY)
+
+jellyfin_dest = jf.Jellyfin(url=JF_DEST_URL,
+                            api_key=JF_DEST_API_KEY,
+                            username=JF_DEST_ADMIN_USERNAME,
+                            password=JF_DEST_ADMIN_PASSWORD,
+                            default_policy=settings.JELLYFIN_USER_POLICY)
+
 user_list = {}
 
 
@@ -30,44 +43,40 @@ def password(length):
 
 
 def add_password(uid):
-    p = password(length=10)
-    r = jf.resetPassword(uid)
-    if str(r.status_code).startswith('2'):
-        r = jf.setUserPassword(uid, "", p)
-        if str(r.status_code).startswith('2'):
-            return p
+    pwd = password(length=10)
+    if jellyfin_dest.resetPassword(userId=uid):
+        if jellyfin_dest.setUserPassword(userId=uid, currentPass="", newPass=pwd):
+            return pwd
     return None
 
 
 def update_policy(uid, policy=None):
-    if str(jf.updatePolicy(uid, policy).status_code).startswith('2'):
+    if jellyfin_dest.updatePolicy(userId=uid, policy=policy):
         return True
     return False
 
 
-def make_jellyfin_user(username):
+def make_jellyfin_user(username, on_server):
     try:
-        p = None
-        r = jf.makeUser(username)
-        if str(r.status_code).startswith('2'):
-            r = json.loads(r.text)
-            uid = r['Id']
-            p = add_password(uid)
-            if not p:
+        pwd = None
+        jellyfin_user, failure_msg = on_server.makeUser(username=username)
+        if jellyfin_user:
+            pwd = add_password(uid=jellyfin_user.id)
+            if not pwd:
                 print("Password update failed. Moving on...")
-            if update_policy(uid, jf.JELLYFIN_USER_POLICY):
-                return True, uid, p
+            if update_policy(uid=jellyfin_user.id, policy=on_server.policy):
+                return True, jellyfin_user.id, pwd
             else:
-                return False, uid, p
-        return False, r.content.decode("utf-8"), p
+                return False, jellyfin_user.id, pwd
+        return False, failure_msg, pwd
     except Exception as e:
-        print(e)
-        return False, None, None
+        print(f"Error in make_jellyfin_user: {e}")
+    return False, None, None
 
 
 def move_to_jellyfin(username):
-    print("Adding {} to Jellyfin...".format(username))
-    succeeded, uid, pwd = make_jellyfin_user(username)
+    print(f"Adding {username} to Jellyfin...")
+    succeeded, uid, pwd = make_jellyfin_user(username=username, on_server=jellyfin_dest)
     if succeeded:
         user_list[username] = [uid, pwd]
         return True, None
@@ -77,41 +86,17 @@ def move_to_jellyfin(username):
         return False, None
 
 
-# Connect to source server, get users
-jf.JELLYFIN_URL = JF_SRC_URL
-jf.JELLYFIN_API_KEY = JF_SRC_API_KEY
-jf.JELLYFIN_ADMIN_USERNAME = JF_SRC_ADMIN_USERNAME
-jf.JELLYFIN_ADMIN_PASSWORD = JF_SRC_ADMIN_PASSWORD
-jf.authenticate()
-jf.JELLYFIN_URL = JF_SRC_URL
-jf.JELLYFIN_API_KEY = JF_SRC_API_KEY
-jf.JELLYFIN_ADMIN_USERNAME = JF_SRC_ADMIN_USERNAME
-jf.JELLYFIN_ADMIN_PASSWORD = JF_SRC_ADMIN_PASSWORD
-
-print("Beginning user migration...")
-src_users = jf.getUsers()
-
-# Connect to destination server, create users
-jf.JELLYFIN_URL = JF_DEST_URL
-jf.JELLYFIN_API_KEY = JF_DEST_API_KEY
-jf.JELLYFIN_ADMIN_USERNAME = JF_DEST_ADMIN_USERNAME
-jf.JELLYFIN_ADMIN_PASSWORD = JF_DEST_ADMIN_PASSWORD
-jf.authenticate()
-jf.JELLYFIN_URL = JF_DEST_URL
-jf.JELLYFIN_API_KEY = JF_DEST_API_KEY
-jf.JELLYFIN_ADMIN_USERNAME = JF_DEST_ADMIN_USERNAME
-jf.JELLYFIN_ADMIN_PASSWORD = JF_DEST_ADMIN_PASSWORD
-
-for user in src_users:
-    # print(user)
-    if user.get('Name'):
-        success, failure_reason = move_to_jellyfin(user['Name'])
-        if success:
-            print("{} added to Jellyfin.".format(user['Name']))
-        else:
-            print("{} was not added to Jellyfin. Reason: {}".format(user['Name'], failure_reason))
-print("User migration complete.")
-if user_list:
-    print("\nUsername ---- Password")
-    for k, v in user_list.items():
-        print(str(k) + "  |  " + str(v[1]))
+if __name__ == '__main__':
+    print("Beginning user migration...")
+    for user in jellyfin_src.getUsers():
+        if user.name:
+            success, failure_reason = move_to_jellyfin(username=user.name)
+            if success:
+                print(f"{user.name} added to Jellyfin.")
+            else:
+                print(f"{user.name} was not added to Jellyfin. Reason: {failure_reason}")
+    print("User migration complete.")
+    if user_list:
+        print("\nUsername ---- Password")
+        for k, v in user_list.items():
+            print(f"{k}  |  {v[1]}")
