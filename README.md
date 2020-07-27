@@ -2,7 +2,16 @@
 Scripts to assist migrating from a Plex Media Server to a Jellyfin Media Server
 
 - Migrate users: Creates a new user account on Jellyfin for each Plex user with access to your Plex Media Server
-- Migrate ratings: Copies user ratings of media items from Plex over to Jellyfin (currently not working)
-- Migrate playlists: Scan Plex playlists to create and populate identical playlists on Jellyfin (currently not working)
+- Migrate ratings: Copies user ratings of media items from Plex over to Jellyfin
+- Migrate playlists: Scan Plex playlists to create and populate identical playlists on Jellyfin
+- Migrate Jellyfin users to another Jellyfin server: Mirror all Jellyfin users from one server to another server
 
-NOTE: The Jellyfin Media Server project is a community-run, open-source project, and as such, the API is in severe need of reworking. Because of issues with the Jellyfin API server-side, some of these scripts are currently not working. I will push out updates once the necessary fixes are made.
+# Install & Run
+1. Clone this repo with ``git clone https://github.com/nwithan8/Plex2Jellyfin.git``.
+2. Enter the ``Plex2Jellyfin`` directory.
+3. Install dependencies with ``pip install -r requirements.txt``
+4. Enter the ``scripts`` folder.
+5. Copy ``creds.py.blank`` as ``creds.py`` and complete the information inside.
+6. Run a script with ``python [SCRIPT NAME]``.
+
+**Requires Python 3.6+**
