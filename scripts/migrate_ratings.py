@@ -7,7 +7,7 @@ rating on the corresponding item on Jellyfin.
 
 import helpers.jellyfin as jf
 import helpers.plex as px
-import helpers.creds as settings
+import creds as settings
 from progress.bar import Bar
 
 plex = px.Plex(url=settings.PLEX_URL,

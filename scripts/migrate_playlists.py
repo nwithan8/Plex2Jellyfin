@@ -7,7 +7,7 @@ Every item on each Plex playlist will be located and added to the new Jellyfin p
 
 import helpers.jellyfin as jf
 import helpers.plex as px
-import helpers.creds as settings
+import creds as settings
 from progress.bar import Bar
 import sys
 import signal

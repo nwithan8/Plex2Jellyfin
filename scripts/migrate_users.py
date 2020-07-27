@@ -11,7 +11,7 @@ import random
 import string
 import helpers.jellyfin as jf
 import helpers.plex as px
-import helpers.creds as settings
+import creds as settings
 
 plex = px.Plex(url=settings.PLEX_URL,
                token=settings.PLEX_TOKEN,

@@ -9,7 +9,7 @@ import json
 import random
 import string
 import helpers.jellyfin as jf
-import helpers.creds as settings
+import creds as settings
 
 # Details for first Jellyfin server (source server)
 JF_SRC_URL = ''
