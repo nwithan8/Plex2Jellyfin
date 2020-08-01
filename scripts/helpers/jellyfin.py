@@ -51,7 +51,6 @@ class Jellyfin:
         signal.signal(signal.SIGINT, signal.default_int_handler)
 
     def authenticate(self, force_new_auth=False):
-        signal.signal(signal.SIGINT, signal_handler)
         if force_new_auth or not self._load_token_id(token_file):
             print("Authenticating with Jellfin...")
             xEmbyAuth = {
@@ -84,7 +83,6 @@ class Jellyfin:
         return False
 
     def _get_request(self, cmd, params=None, retried=False):
-        signal.signal(signal.SIGINT, signal_handler)
         try:
             res = requests.get(f'{self.url}{cmd}?api_key={self.key}{("&" + params if params else "")}')
             if res:
@@ -97,7 +95,6 @@ class Jellyfin:
         return self._get_request(cmd=cmd, params=params, retried=True)
 
     def _get_request_with_token(self, hdr, cmd, data=None, retried=False):
-        signal.signal(signal.SIGINT, signal_handler)
         try:
             hdr = {'accept': 'application/json', **hdr}
             res = requests.get(f'{self.url}{cmd}', headers=hdr, data=(json.dumps(data) if data else None))
@@ -111,7 +108,6 @@ class Jellyfin:
         return self._get_request_with_token(hdr=hdr, cmd=cmd, data=data, retried=True)
 
     def _post_request(self, cmd, params=None, payload=None, retried=False):
-        signal.signal(signal.SIGINT, signal_handler)
         try:
             res = requests.post(
                 f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}', json=payload)
@@ -125,7 +121,6 @@ class Jellyfin:
         return self._post_request(cmd=cmd, params=params, payload=payload, retried=True)
 
     def _post_request_with_token(self, hdr, cmd, data=None, retried=False):
-        signal.signal(signal.SIGINT, signal_handler)
         try:
             hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
             res = requests.post(f'{self.url}{cmd}', headers=hdr, data=(json.dumps(data) if data else None))
@@ -139,7 +134,6 @@ class Jellyfin:
         return self._post_request_with_token(hdr=hdr, cmd=cmd, data=data, retried=True)
 
     def _delete_request(self, cmd, params=None, retried=False):
-        signal.signal(signal.SIGINT, signal_handler)
         try:
             res = requests.delete(
                 f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}')
@@ -253,8 +247,10 @@ class Jellyfin:
         cmd = '/user_usage_stats/submit_custom_query'
         return self._post_request(cmd=cmd, params=None, payload=query)
 
-    def findPlexItemOnJellyfin(self, plex_item):
-        results = self.search(keyword=plex_item.title)
+    def findPlexItemOnJellyfin(self, plex_item, title=None):
+        if not title:
+            title = plex_item.title
+        results = self.search(keyword=title)
         if results:
             return results[0]
         return None
