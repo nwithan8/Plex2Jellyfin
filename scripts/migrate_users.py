@@ -75,7 +75,7 @@ def convert_plex_to_jellyfin(username):
 
 if __name__ == '__main__':
     print("Beginning user migration...")
-    jf_users = set((i.name for i in jellyfin.getUsers()))
+    jf_users = [i.name for i in jellyfin.getUsers()]
     for plex_user in plex.get_users():
         if plex.user_has_server_access(user=plex_user):
             username = plex_user.username or plex_user.title
