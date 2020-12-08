@@ -29,5 +29,6 @@ JELLYFIN_USER_POLICY = {
         "IPTV",
         "TVHeadEnd Recordings"
     ],
-    "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider"
+    "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
+    "PasswordResetProviderId": "Emby.Server.Implementations.Library.DefaultPasswordResetProvider"
 }

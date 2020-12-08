@@ -28,5 +28,7 @@ JELLYFIN_USER_POLICY = {
     "BlockedChannels": [
         "IPTV",
         "TVHeadEnd Recordings"
-    ]
+    ],
+    "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
+    "PasswordResetProviderId": "Emby.Server.Implementations.Library.DefaultPasswordResetProvider"
 }
