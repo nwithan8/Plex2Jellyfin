@@ -75,14 +75,19 @@ def convert_plex_to_jellyfin(username):
 
 if __name__ == '__main__':
     print("Beginning user migration...")
+    jf_users = set((i.name for i in jellyfin.getUsers()))
     for plex_user in plex.get_users():
         if plex.user_has_server_access(user=plex_user):
-            success, failure_reason = convert_plex_to_jellyfin(username=plex_user.username)
-            if success:
-                print(f"{plex_user.username} added to Jellyfin.")
+            username = plex_user.username or plex_user.title
+            if username in jf_users:
+                print(f"User {username} already exists, skipping")
+                continue
             else:
-                print(f"{plex_user.username} was not added to Jellyfin. Reason: {failure_reason}")
-            break
+                success, failure_reason = convert_plex_to_jellyfin(username=username)
+                if success:
+                    print(f"{plex_user.username} added to Jellyfin.")
+                else:
+                    print(f"{plex_user.username} was not added to Jellyfin. Reason: {failure_reason}")
     print("User migration complete.")
     if user_list:
         print("\nUsername ---- Password")
