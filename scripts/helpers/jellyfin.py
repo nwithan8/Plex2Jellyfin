@@ -110,7 +110,11 @@ class Jellyfin:
     def _post_request(self, cmd, params=None, payload=None, retried=False):
         try:
             res = requests.post(
-                f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}', json=payload)
+                f'{self.url}{cmd}?api_key={self.key}{("&" + params if params is not None else "")}',
+                json=payload,
+                headers={'accept': 'application/json', 'Content-Type': 'application/json'}
+            )
+
             if res:
                 return res
             return None
