@@ -124,6 +124,23 @@ class Jellyfin:
             self.authenticate(force_new_auth=True)
         return self._post_request(cmd=cmd, params=params, payload=payload, retried=True)
 
+    def _post_request_json(self, cmd, payload=None, retried=False):
+        try:
+            res = requests.post(
+                f'{self.url}{cmd}?api_key={self.key}',
+                json=payload,
+                headers={'accept': 'application/json', 'Content-Type': 'application/json'}
+            )
+
+            if res:
+                return res
+            return None
+        except:
+            if retried:
+                return None
+            self.authenticate(force_new_auth=True)
+        return self._post_request_json(cmd=cmd, payload=payload, retried=True)
+
     def _post_request_with_token(self, hdr, cmd, data=None, retried=False):
         try:
             hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
@@ -231,9 +248,11 @@ class Jellyfin:
         cmd = f'/Playlists'
 
     def makePlaylist(self, name):
-        cmd = f'/Playlists'
-        params = f'{urlencode({"Name": name})}&UserId={self.user_id}'
-        res = self._post_request(cmd=cmd, params=params)
+        res = self._post_request_json(
+            cmd=f'/Playlists',
+            payload={"Name": name, "UserId": self.user_id}
+        )
+
         if res:
             return JellyfinPlaylist(data=res.json())
         return None
