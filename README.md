@@ -14,9 +14,9 @@ Scripts to assist migrating from a Plex Media Server to a Jellyfin Media Server
 3. Create a new local `venv` with `python3 -m venv venv`.
 4. Activate the new `venv` with `source venv/bin/activate`.
 5. Install dependencies with `pip install -r requirements.txt`.
-6. Enter the `scripts` folder.
-7. Copy `creds.py.blank` as `creds.py` and complete the information inside.
+6. Enter the `scripts` folder, `cd scripts`.
+7. Copy `creds.py.blank` as `creds.py`, `cp creds.py.blank creds.py`, and complete the information inside.
    - Getting the Plex token: [https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-8. Run a script with `python3 [SCRIPT NAME]`, e.g. `python3 scripts/migrate_playlists.py`.
+8. Run a script with `python3 [SCRIPT NAME]`, e.g. `python3 migrate_playlists.py`.
 
 **Requires Python 3.6+**
