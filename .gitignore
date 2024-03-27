@@ -1,6 +1,6 @@
 # Secrets
 scripts/creds.py
-.jellyfin_token
+scripts/.jellyfin_token
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
