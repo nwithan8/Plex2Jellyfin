@@ -1,0 +1,11 @@
+[project]
+name = "plex2jellyfin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "plexapi",
+    "progress",
+    "requests",
+]

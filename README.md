@@ -9,14 +9,12 @@ Scripts to assist migrating from a Plex Media Server to a Jellyfin Media Server
 
 # Install & Run
 
-1. Clone this repo with `git clone https://github.com/nwithan8/Plex2Jellyfin.git`.
-2. Enter the `Plex2Jellyfin` directory.
-3. Create a new local `venv` with `python3 -m venv venv`.
-4. Activate the new `venv` with `source venv/bin/activate`.
-5. Install dependencies with `pip install -r requirements.txt`.
-6. Enter the `scripts` folder, `cd scripts`.
-7. Copy `creds.py.blank` as `creds.py`, `cp creds.py.blank creds.py`, and complete the information inside.
+1. Ensure `uv` is present on the system (see the [uv docs](https://docs.astral.sh/uv/getting-started/installation/))
+2. Clone this repo with `git clone https://github.com/nwithan8/Plex2Jellyfin.git`.
+3. Enter the `Plex2Jellyfin` directory
+4. Enter the `scripts` folder, `cd scripts`.
+5. Copy `creds.py.blank` as `creds.py`, `cp creds.py.blank creds.py`, and complete the information inside.
    - Getting the Plex token: [https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/)
-8. Run a script with `python3 [SCRIPT NAME]`, e.g. `python3 migrate_playlists.py`.
+6. Run a script with `uv run scripts/[SCRIPT NAME]`, e.g. `uv run scripts/migrate_playlists.py`. Dependencies and virtual environments will be handled for you.
 
 **Requires Python 3.6+**
