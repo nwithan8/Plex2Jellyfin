@@ -6,6 +6,7 @@ This script will make an M3u playlist for each playlist for each user on your Pl
 from pathlib import Path
 
 import helpers.plex as px
+from plexapi.exceptions import Unauthorized
 import creds as settings
 from progress.bar import Bar
 import sys
@@ -23,7 +24,10 @@ def signal_handler(signum, frame):
 
 def playlists_for(user:str = None):
     if user is not None:
-        plex_as_user = plex.as_user(user)
+        try:
+            plex_as_user = plex.as_user(user)
+        except Unauthorized:
+            return None
         return plex_as_user.get_playlists()
     return plex.get_playlists()
         
@@ -49,6 +53,8 @@ if __name__ == '__main__':
         print()
         print(f"Beginning playlist migration for {u.username}...")
         playlists = playlists_for(u.username)
+        if playlists is None:
+            continue
 
         for plex_playlist in playlists:
             filename=f"{u.username}_{plex_playlist.title}.m3u"
