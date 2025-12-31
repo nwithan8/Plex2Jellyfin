@@ -25,3 +25,12 @@ class Plex:
 
     def get_all_section_items(self, section):
         return section.all()
+
+    def as_user(self, user:str):
+        """Returns a new instance logged in as the target user
+
+        Args:
+            user (str): username of the user to log in as
+        """
+
+        return Plex(self.url, self.token, self.server_name, server=self.server.switchUser(user))
