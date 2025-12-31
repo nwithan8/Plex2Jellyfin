@@ -2,11 +2,11 @@ from plexapi.server import PlexServer
 
 
 class Plex:
-    def __init__(self, url, token, server_name):
+    def __init__(self, url, token, server_name, server=None):
         self.url = url
         self.token = token
         self.server_name = server_name
-        self.server = PlexServer(url, token)
+        self.server = server or PlexServer(url, token)
 
     def get_users(self):
         return self.server.myPlexAccount().users()
