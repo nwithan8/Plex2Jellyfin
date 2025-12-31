@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # print(jellyfin.getPlaylists())
     users = plex.get_users()
 
-    BASE_PATH="./out"
+    BASE_PATH=Path("./out")
 
     for u in users:
         if u.username == "":
@@ -57,7 +57,7 @@ if __name__ == '__main__':
             continue
 
         for plex_playlist in playlists:
-            filename=f"{u.username}_{plex_playlist.title}.m3u"
+            filename=f"{plex_playlist.title}.m3u"
             output = []
             print(plex_playlist.title)
             output.append("#EXTM3U" + "\n")
@@ -66,8 +66,10 @@ if __name__ == '__main__':
             for plex_item in plex_items:
                 output.append(f"#EXTINF:{int((plex_item.duration or 0)/1000)},{plex_item.title}" + "\n")
                 output.append(plex_item.locations[0] + "\n")
-            if not Path(BASE_PATH).exists():
-                Path(BASE_PATH).mkdir()
-            with Path(BASE_PATH).joinpath(filename).open("w", encoding="utf-8") as o:
+
+            output_path = BASE_PATH.joinpath(u.username)
+            if not output_path.exists():
+                output_path.mkdir(parents=True, exist_ok=True)
+            with output_path.joinpath(filename).open("w", encoding="utf-8") as o:
                 o.writelines(output)
     print("Playlist export complete.")
