@@ -144,15 +144,15 @@ class Jellyfin:
     def _post_request_with_token(self, hdr, cmd, data=None, retried=False):
         try:
             hdr = {'accept': 'application/json', 'Content-Type': 'application/json', **hdr}
-            res = requests.post(f'{self.url}{cmd}', headers=hdr, data=(json.dumps(data) if data else None))
-            if res:
-                return res
+            res = requests.post(f'{self.url}{cmd}', headers=hdr, json=data)
+            if res.status_code == 401 and not retried:
+                self.authenticate(force_new_auth=True)
+                return self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=data, retried=True)
+            return res
+
+        except requests.exceptions.RequestException as e:
+            print(f"Network error: {e}")
             return None
-        except:
-            if retried:
-                return None
-            self.authenticate(force_new_auth=True)
-        return self._post_request_with_token(hdr=hdr, cmd=cmd, data=data, retried=True)
 
     def _delete_request(self, cmd, params=None, retried=False):
         try:
@@ -185,22 +185,23 @@ class Jellyfin:
         cmd = f'/Users/{userId}/Password'
         data = {
             'Id': str(userId),
-            'ResetPassword': 'true'
+            'ResetPassword': True
         }
         res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=data)
-        if res:
+
+        if res.status_code == 204:
             return True
         return False
 
     def setUserPassword(self, userId, currentPass, newPass):
         cmd = f'/Users/{userId}/Password'
         data = {
-            'Id': userId,
+            'Id': str(userId),
             'CurrentPw': currentPass,
             'NewPw': newPass
         }
         res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=data)
-        if res:
+        if res.status_code == 204:
             return True
         return False
 
@@ -209,7 +210,8 @@ class Jellyfin:
             policy = self.policy
         cmd = f'/Users/{userId}/Policy'
         res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=policy)
-        if res:
+
+        if res.status_code == 204:
             return True
         return False
 
@@ -229,7 +231,6 @@ class Jellyfin:
         return self._get_request_with_token(hdr=self.token_header, cmd=cmd)
 
     def getUsers(self):
-        # cmd = '/user_usage_stats/user_list'
         cmd = '/Users'
         res = self._get_request(cmd=cmd, params=None)
         users = []
