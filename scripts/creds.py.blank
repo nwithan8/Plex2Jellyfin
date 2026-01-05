@@ -8,27 +8,29 @@ JELLYFIN_ADMIN_USERNAME = ''
 JELLYFIN_ADMIN_PASSWORD = ''
 
 JELLYFIN_USER_POLICY = {
-    "IsAdministrator": "false",
-    "IsHidden": "true",
-    "IsHiddenRemotely": "true",
-    "IsDisabled": "false",
-    "EnableRemoteControlOfOtherUsers": "false",
-    "EnableSharedDeviceControl": "false",
-    "EnableRemoteAccess": "true",
-    "EnableLiveTvManagement": "false",
-    "EnableLiveTvAccess": "false",
-    "EnableContentDeletion": "false",
-    "EnableContentDownloading": "false",
-    "EnableSyncTranscoding": "false",
-    "EnableSubtitleManagement": "false",
-    "EnableAllDevices": "true",
-    "EnableAllChannels": "false",
-    "EnablePublicSharing": "false",
-    "InvalidLoginAttemptCount": 5,
-    "BlockedChannels": [
-        "IPTV",
-        "TVHeadEnd Recordings"
-    ],
+    "Policy": {
+        "IsAdministrator": False,
+        "IsHidden": True,
+        "IsHiddenRemotely": True,
+        "IsDisabled": False,
+        "EnableRemoteControlOfOtherUsers": False,
+        "EnableSharedDeviceControl": False,
+        "EnableRemoteAccess": True,
+        "EnableLiveTvManagement": False,
+        "EnableLiveTvAccess": True,
+        "EnableContentDeletion": False,
+        "EnableContentDownloading": False,
+        "EnableSyncTranscoding": False,
+        "EnableSubtitleManagement": False,
+        "EnableAllDevices": True,
+        "EnableAllChannels": False,
+        "EnablePublicSharing": False,
+        "InvalidLoginAttemptCount": 5,
+        "BlockedChannels": [
+            "IPTV",
+            "TVHeadEnd Recordings"
+        ]
+    },
     "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
     "PasswordResetProviderId": "Emby.Server.Implementations.Library.DefaultPasswordResetProvider"
 }
