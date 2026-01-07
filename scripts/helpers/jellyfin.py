@@ -39,13 +39,14 @@ class JellyfinUser:
 
 
 class Jellyfin:
-    def __init__(self, url, api_key, username, password, default_policy):
+    def __init__(self, url, api_key, username, password, default_policy, default_config):
         self.url = url
         self.key = api_key
         self.username = username
         self.password = password
         self.user_id = None
         self.policy = default_policy
+        self.config = default_config
         self.token_header = None
         self.authenticate(force_new_auth=False)
         signal.signal(signal.SIGINT, signal.default_int_handler)
@@ -210,6 +211,16 @@ class Jellyfin:
             policy = self.policy
         cmd = f'/Users/{userId}/Policy'
         res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=policy)
+
+        if res.status_code == 204:
+            return True
+        return False
+
+    def updateConfig(self, userId, config=None):
+        if not config:
+            config = self.config
+        cmd = f'/Users/{userId}/Configuration'
+        res = self._post_request_with_token(hdr=self.token_header, cmd=cmd, data=config)
 
         if res.status_code == 204:
             return True

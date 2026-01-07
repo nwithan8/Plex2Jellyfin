@@ -20,7 +20,8 @@ jellyfin = jf.Jellyfin(url=settings.JELLYFIN_URL,
                        api_key=settings.JELLYFIN_API_KEY,
                        username=settings.JELLYFIN_ADMIN_USERNAME,
                        password=settings.JELLYFIN_ADMIN_PASSWORD,
-                       default_policy=settings.JELLYFIN_USER_POLICY)
+                       default_policy=settings.JELLYFIN_USER_POLICY,
+                       default_config=settings.JELLYFIN_USER_CONFIG)
 
 user_list = {}
 
@@ -42,6 +43,11 @@ def update_policy(uid, policy=None):
         return True
     return False
 
+def update_config(uid, config=None):
+    if jellyfin.updateConfig(userId=uid, config=config):
+        return True
+    return False
+
 def make_jellyfin_user(username):
     try:
         pwd = None
@@ -50,7 +56,7 @@ def make_jellyfin_user(username):
             pwd = add_password(uid=jellyfin_user.id)
             if not pwd:
                 print("Password update failed. Moving on...")
-            if update_policy(uid=jellyfin_user.id, policy=jellyfin.policy):
+            if update_policy(uid=jellyfin_user.id, policy=jellyfin.policy) and update_config(uid=jellyfin_user.id, config=jellyfin.config):
                 return True, jellyfin_user.id, pwd
             else:
                 return False, jellyfin_user.id, pwd

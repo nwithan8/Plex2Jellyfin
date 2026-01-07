@@ -7,30 +7,38 @@ JELLYFIN_API_KEY = ""
 JELLYFIN_ADMIN_USERNAME = ''
 JELLYFIN_ADMIN_PASSWORD = ''
 
+JELLYFIN_USER_CONFIG = {
+    "AudioLanguagePreference": "ron",
+    "PlayDefaultAudioTrack": True,
+    "SubtitleLanguagePreference": "ron",
+    "DisplayMissingEpisodes": False,
+    "SubtitleMode": "Default",
+    "DisplayCollectionsView": True,
+    "RememberAudioSelections": True,
+    "RememberSubtitleSelections": True,
+    "EnableNextEpisodeAutoPlay": True,
+}
+
 JELLYFIN_USER_POLICY = {
-    "Policy": {
-        "IsAdministrator": False,
-        "IsHidden": True,
-        "IsHiddenRemotely": True,
-        "IsDisabled": False,
-        "EnableRemoteControlOfOtherUsers": False,
-        "EnableSharedDeviceControl": False,
-        "EnableRemoteAccess": True,
-        "EnableLiveTvManagement": False,
-        "EnableLiveTvAccess": True,
-        "EnableContentDeletion": False,
-        "EnableContentDownloading": False,
-        "EnableSyncTranscoding": False,
-        "EnableSubtitleManagement": False,
-        "EnableAllDevices": True,
-        "EnableAllChannels": False,
-        "EnablePublicSharing": False,
-        "InvalidLoginAttemptCount": 5,
-        "BlockedChannels": [
-            "IPTV",
-            "TVHeadEnd Recordings"
-        ]
-    },
-    "AuthenticationProviderId": "Emby.Server.Implementations.Library.DefaultAuthenticationProvider",
-    "PasswordResetProviderId": "Emby.Server.Implementations.Library.DefaultPasswordResetProvider"
+    "IsAdministrator": False,
+    "IsHidden": True,
+    "IsHiddenRemotely": True,
+    "IsDisabled": False,
+    "EnableRemoteControlOfOtherUsers": False,
+    "EnableSharedDeviceControl": False,
+    "EnableRemoteAccess": True,
+    "EnableLiveTvManagement": False,
+    "EnableLiveTvAccess": True,
+    "EnableContentDeletion": False,
+    "EnableContentDownloading": False,
+    "EnableSyncTranscoding": False,
+    "EnableSubtitleManagement": False,
+    "EnableAllDevices": True,
+    "EnableAllChannels": False,
+    "EnablePublicSharing": False,
+    "InvalidLoginAttemptCount": 5,
+    "LoginAttemptsBeforeLockout": 5,
+    "AuthenticationProviderId": "Jellyfin.Server.Implementations.Users.DefaultAuthenticationProvider",
+    "PasswordResetProviderId": "Jellyfin.Server.Implementations.Users.DefaultPasswordResetProvider",
+    "SyncPlayAccess": "CreateAndJoinGroups"
 }
