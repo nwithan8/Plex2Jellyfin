@@ -2,11 +2,11 @@ from plexapi.server import PlexServer
 
 
 class Plex:
-    def __init__(self, url, token, server_name):
+    def __init__(self, url, token, server_name, server=None):
         self.url = url
         self.token = token
         self.server_name = server_name
-        self.server = PlexServer(url, token)
+        self.server = server or PlexServer(url, token)
 
     def get_users(self):
         return self.server.myPlexAccount().users()
@@ -25,3 +25,12 @@ class Plex:
 
     def get_all_section_items(self, section):
         return section.all()
+
+    def as_user(self, user:str):
+        """Returns a new instance logged in as the target user
+
+        Args:
+            user (str): username of the user to log in as
+        """
+
+        return Plex(self.url, self.token, self.server_name, server=self.server.switchUser(user))
